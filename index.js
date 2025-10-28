@@ -1,7 +1,13 @@
 import express from "express";
 import countriesRouter from "./routes/countriesRouter.js";
+import { connectDB, sequelize } from "./db.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 const app = express();
+
+connectDB();
+await sequelize.sync({ alter: true });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
