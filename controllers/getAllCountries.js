@@ -1,7 +1,9 @@
-import axios from "axios";
+import refreshData from "../utils/refreshData.js";
 
-const getAllCountries = (req, res) => {
-  res.send("getting all countries");
+const getAllCountries = async (req, res) => {
+  const special = refreshData();
+  res.json({ message: "getting all countries", data: special });
+  refreshData();
 };
 
 export default getAllCountries;
