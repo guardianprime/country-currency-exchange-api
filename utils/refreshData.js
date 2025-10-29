@@ -32,8 +32,36 @@ const refreshData = async () => {
     const countries = countryRes.data;
     const rates = rateRes.data.rates;
 
+    // DEBUG: Log the first country to see the structure
+    console.log(
+      "First country structure:",
+      JSON.stringify(countries[0], null, 2)
+    );
+
     for (const c of countries) {
-      const code = c.currencies?.[0]?.code || null;
+      // FIX: Handle different API response structures
+      // For REST Countries API v3.1
+      const name = c.name?.common || c.name?.official || c.name;
+      const capital = Array.isArray(c.capital) ? c.capital[0] : c.capital;
+      const region = c.region;
+      const population = c.population;
+      const flag = c.flags?.png || c.flags?.svg || c.flag;
+
+      // Handle currencies object (REST Countries returns an object, not array)
+      let code = null;
+      if (c.currencies) {
+        // REST Countries v3.1 format: { USD: { name: "United States dollar", symbol: "$" } }
+        code = Object.keys(c.currencies)[0];
+      } else if (Array.isArray(c.currencies) && c.currencies.length > 0) {
+        // Alternative format: [{ code: "USD", name: "...", symbol: "..." }]
+        code = c.currencies[0].code;
+      }
+
+      // Skip if essential data is missing
+      if (!name) {
+        console.warn("Skipping country with no name:", c);
+        continue;
+      }
 
       let rate = null;
       let estimatedgdp = null;
@@ -44,9 +72,9 @@ const refreshData = async () => {
       } else {
         rate = rates[code] || null;
 
-        if (rate) {
+        if (rate && population) {
           const random = Math.floor(Math.random() * (2000 - 1000 + 1)) + 1000;
-          estimatedgdp = (c.population * random) / rate;
+          estimatedgdp = (population * random) / rate;
         } else {
           estimatedgdp = null;
         }
@@ -55,40 +83,27 @@ const refreshData = async () => {
       const existingCountry = await Country.findOne({
         where: {
           name: {
-            [Op.like]: c.name,
+            [Op.like]: name,
           },
         },
       });
 
+      const countryData = {
+        name: name,
+        capital: capital || null,
+        region: region || null,
+        population: population || 0,
+        flag_url: flag || null,
+        currency_code: code,
+        exchange_rate: rate,
+        estimated_gdp: estimatedgdp,
+        last_refreshed_at: new Date(),
+      };
+
       if (existingCountry) {
-        await existingCountry.update(
-          {
-            capital: c.capital,
-            region: c.region,
-            population: c.population,
-            flag_url: c.flag,
-            currency_code: code,
-            exchange_rate: rate,
-            estimated_gdp: estimatedgdp,
-            last_refreshed_at: new Date(),
-          },
-          { transaction }
-        );
+        await existingCountry.update(countryData, { transaction });
       } else {
-        await Country.create(
-          {
-            name: c.name,
-            capital: c.capital,
-            region: c.region,
-            population: c.population,
-            flag_url: c.flag,
-            currency_code: code,
-            exchange_rate: rate,
-            estimated_gdp: estimatedgdp,
-            last_refreshed_at: new Date(),
-          },
-          { transaction }
-        );
+        await Country.create(countryData, { transaction });
       }
     }
 
@@ -109,6 +124,7 @@ const refreshData = async () => {
   } catch (err) {
     await transaction.rollback();
     console.error("Failed to refresh data:", err.message);
+    console.error("Full error:", err);
 
     if (err.message === "COUNTRY_API_FAILED") {
       return {

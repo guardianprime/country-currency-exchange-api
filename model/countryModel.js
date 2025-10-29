@@ -16,27 +16,16 @@ const Country = sequelize.define(
     region: { type: DataTypes.STRING },
     population: {
       type: DataTypes.INTEGER,
-      allowNull: false,
-      validate: {
-        notNull: { msg: "is required" },
-        isInt: { msg: "must be an integer" },
-      },
+      allowNull: true,
+      defaultValue: 0,
     },
     currency_code: {
       type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        notNull: { msg: "is required" },
-        notEmpty: { msg: "is required" },
-      },
+      allowNull: true,
     },
     exchange_rate: {
       type: DataTypes.FLOAT,
-      allowNull: false,
-      validate: {
-        notNull: { msg: "is required" },
-        isFloat: { msg: "must be a number" },
-      },
+      allowNull: true,
     },
     estimated_gdp: {
       type: DataTypes.FLOAT,
