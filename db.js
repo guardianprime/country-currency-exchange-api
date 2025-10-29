@@ -1,10 +1,30 @@
 import { Sequelize } from "sequelize";
-import dotenv from "dotenv";
-dotenv.config();
+import "dotenv/config";
 
-const databaseUrl = process.env.DATABASE_URL || process.env.MYSQL_URL;
+const connectionUrl =
+  (process.env.DATABASE_URL && process.env.DATABASE_URL.trim()) ||
+  (process.env.MYSQL_URL && process.env.MYSQL_URL.trim()) ||
+  (() => {
+    const host = process.env.DB_HOST && process.env.DB_HOST.trim();
+    if (!host) return undefined;
+    const user = encodeURIComponent(
+      (process.env.DB_USERNAME || process.env.DB_USER || "").trim()
+    );
+    const pass = encodeURIComponent(
+      (process.env.DB_PASSWORD || process.env.DB_PASS || "").trim()
+    );
+    const db = (process.env.DB_DATABASE || process.env.DB_NAME || "").trim();
+    const port = process.env.DB_PORT ? `:${process.env.DB_PORT.trim()}` : "";
+    return `mysql://${user}:${pass}@${host}${port}/${db}`;
+  })();
 
-export const sequelize = new Sequelize(databaseUrl, {
+if (!connectionUrl) {
+  throw new Error(
+    "No DB connection info found. Set DATABASE_URL or MYSQL_URL or DB_HOST/DB_USERNAME/DB_PASSWORD/DB_DATABASE in env."
+  );
+}
+
+export const sequelize = new Sequelize(connectionUrl, {
   dialect: "mysql",
   logging: false,
   dialectOptions: {
