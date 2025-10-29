@@ -1,4 +1,8 @@
+import { validateCountry } from "../utils/validation.js";
+import refreshData from "../utils/refreshData.js";
+
 const saveAllCountries = async (req, res) => {
+  validateCountry;
   try {
     const result = await refreshData();
 

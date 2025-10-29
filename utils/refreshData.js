@@ -1,7 +1,9 @@
 import axios from "axios";
 import Country from "../model/countryModel.js";
 import dotenv from "dotenv";
+import generateSummaryImage from "../services/imageService.js";
 import { Op } from "sequelize";
+import { sequelize } from "../db.js";
 dotenv.config();
 
 const refreshData = async () => {
@@ -92,6 +94,17 @@ const refreshData = async () => {
 
     await transaction.commit();
     console.log("Country data updated");
+
+    const totalCountries = await Country.count();
+    const topCountries = await Country.findAll({
+      order: [["estimated_gdp", "DESC"]],
+      limit: 5,
+      attributes: ["name", "estimated_gdp"],
+    });
+    const timestamp = new Date();
+
+    await generateSummaryImage(totalCountries, topCountries, timestamp);
+
     return { success: true };
   } catch (err) {
     await transaction.rollback();
